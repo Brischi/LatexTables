@@ -14,7 +14,7 @@ Ich wollte eigentlich nur schnell ein Word-Dokument erstellen,
 hab mich dann aber so über die Formatierung geärgert,  
 dass ich ganz tief ins LaTeX-Rabbithole gefallen bin. 
 
-Hier ist Programm zur **automatischen Generierung von LaTeX-Tabellen**, 
+Hier ist Programm zur **automatischen Generierung von LaTeX-Tabellen** -  
 dass einfach nur bisschen Arbeit beim Tippen spart. 
 
 
