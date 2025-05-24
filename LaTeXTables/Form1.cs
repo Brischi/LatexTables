@@ -1,4 +1,6 @@
-﻿// Namespace und Abhängigkeiten
+﻿
+
+
 using LaTeXTables.Controller;
 using System;
 using System.Collections.Generic;
@@ -6,6 +8,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using LaTeXTables.Properties;
+using LaTeXTables.View;
 
 namespace LaTeXTables
 {
@@ -24,11 +27,11 @@ namespace LaTeXTables
         public Form1()
         {
             InitializeComponent();
-            this.Font = FontHelper.GetDefault(12f); // Setzt Standardschrift
-            SetupUI(); // Initialisiert die Benutzeroberfläche
+            this.Font = FontHelper.HoleStandardSchrift(12f); // Setzt Standardschrift
+            InitialisiereBenutzeroberfläche();              // Initialisiert die Benutzeroberfläche
         }
 
-        private void SetupUI()
+        private void InitialisiereBenutzeroberfläche()
         {
             // Hauptlayout mit drei vertikalen Bereichen: oben Einstellungen, Mitte Tabelle, unten Ausgabe
             var mainLayout = new TableLayoutPanel
@@ -44,7 +47,7 @@ namespace LaTeXTables
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 60f));  // 60 % Mitte (Tabelle)
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));  // 30 % unten (LaTeX-Code-Ausgabe)
 
-            // Panel für Einstellungsbereich (z. B. Dropdown)
+            // Panel für Einstellungsbereich (z. B. Dropdown)
             panelSettings = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -67,7 +70,7 @@ namespace LaTeXTables
                 "Komplettes Gitter"
             });
             cbBorderStyle.SelectedIndex = 3; // Standardwert
-            cbBorderStyle.SelectedIndexChanged += (s, e) => GenerateLatexAndUpdateOutput();
+            cbBorderStyle.SelectedIndexChanged += (s, e) => ErzeugeLatexUndAktualisiereAusgabe();
 
             panelSettings.Controls.Add(cbBorderStyle);
 
@@ -78,7 +81,7 @@ namespace LaTeXTables
                 Padding = new Padding(5)
             };
 
-            // Initiale Tabelle mit 2x2 Feldern
+            // TableLayoutPanel erzeugen
             tablePanel = new TableLayoutPanel
             {
                 ColumnCount = 2,
@@ -86,7 +89,7 @@ namespace LaTeXTables
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
-                GrowStyle = TableLayoutPanelGrowStyle.FixedSize
+                GrowStyle = TableLayoutPanelGrowStyle.AddRows
             };
 
             // Spalten- und Zeilenformatierung
@@ -95,34 +98,29 @@ namespace LaTeXTables
             for (int i = 0; i < 2; i++)
                 tablePanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
 
-            // Erstes Eingabefeld
-            var tb = new TextBox
+            // Eingabefeld in Zelle (0,0)
+            var tb = new TableTextBox
             {
-                Dock = DockStyle.Fill,
-                BorderStyle = BorderStyle.None,
                 BackColor = this.BackColor,
-                ForeColor = Color.Black,
-                Multiline = true,
-                AcceptsReturn = true,
-                WordWrap = true
+                ForeColor = Color.Black
             };
             tablePanel.Controls.Add(tb, 0, 0);
 
-            // Button zum Hinzufügen einer Spalte
+            // Spalte Button in Zelle (0,1)
             var btnCol = new Button { Text = "+ Spalte", Dock = DockStyle.Fill };
-            btnCol.Click += btnAddColumn_Click;
+            btnCol.Click += btnSpalteHinzufügen_Click;
             tablePanel.Controls.Add(btnCol, 1, 0);
 
-            // Button zum Hinzufügen einer Zeile
+            // Zeile Button in Zelle (1,0)
             var btnRow = new Button { Text = "+ Zeile", Dock = DockStyle.Fill };
-            btnRow.Click += btnAddRow_Click;
+            btnRow.Click += btnZeileHinzufügen_Click;
             tablePanel.Controls.Add(btnRow, 0, 1);
 
-            // Button zur LaTeX-Ausgabe
+            // LaTeX-Button in Zelle (1,1)
             btnGenerateLatex = new Button { Text = "LaTeX-Tabelle erzeugen", Dock = DockStyle.Fill };
-            btnGenerateLatex.Click += BtnGenerateLatex_Click;
+            btnGenerateLatex.Click += BtnLatexErzeugen_Click;
             btnGenerateLatex.TabStop = false;
-            tablePanel.Controls.Add(btnGenerateLatex, 1, 1); // Startposition
+            tablePanel.Controls.Add(btnGenerateLatex, 1, 1);
 
             panelTableContainer.Controls.Add(tablePanel);
 
@@ -144,7 +142,7 @@ namespace LaTeXTables
         }
 
         // Fügt eine neue Spalte hinzu
-        private void btnAddColumn_Click(object sender, EventArgs e)
+        private void btnSpalteHinzufügen_Click(object sender, EventArgs e)
         {
             int neueSpalte = tablePanel.ColumnCount;
             int zeilen = tablePanel.RowCount;
@@ -162,15 +160,15 @@ namespace LaTeXTables
 
             // Neuen "+ Spalte"-Button platzieren
             var btn = new Button { Text = "+ Spalte", Dock = DockStyle.Fill };
-            btn.Click += btnAddColumn_Click;
+            btn.Click += btnSpalteHinzufügen_Click;
             tablePanel.Controls.Add(btn, neueSpalte, 0);
 
-            AddTextboxes();
-            PlaceGenerateButton();
+            FuegeTextfelderHinzu();
+            PlatziereErzeugenButton();
         }
 
         // Fügt eine neue Zeile hinzu
-        private void btnAddRow_Click(object sender, EventArgs e)
+        private void btnZeileHinzufügen_Click(object sender, EventArgs e)
         {
             int neueZeile = tablePanel.RowCount;
             int spalten = tablePanel.ColumnCount;
@@ -188,15 +186,15 @@ namespace LaTeXTables
 
             // Neuen "+ Zeile"-Button platzieren
             var btn = new Button { Text = "+ Zeile", Dock = DockStyle.Fill };
-            btn.Click += btnAddRow_Click;
+            btn.Click += btnZeileHinzufügen_Click;
             tablePanel.Controls.Add(btn, 0, neueZeile);
 
-            AddTextboxes();
-            PlaceGenerateButton();
+            FuegeTextfelderHinzu();
+            PlatziereErzeugenButton();
         }
 
         // Fügt alle fehlenden Textboxen ein
-        private void AddTextboxes()
+        private void FuegeTextfelderHinzu()
         {
             for (int row = 0; row < tablePanel.RowCount - 1; row++)
             {
@@ -204,25 +202,20 @@ namespace LaTeXTables
                 {
                     if (tablePanel.GetControlFromPosition(col, row) == null)
                     {
-                        var tb = new TextBox
+                        var tb = new TableTextBox
                         {
-                            Dock = DockStyle.Fill,
-                            BorderStyle = BorderStyle.None,
                             BackColor = this.BackColor,
-                            ForeColor = Color.Black,
-                            Multiline = true,
-                            AcceptsReturn = true,
-                            WordWrap = true
+                            ForeColor = Color.Black
                         };
                         tablePanel.Controls.Add(tb, col, row);
                     }
                 }
             }
-            UpdateTabOrder();
+            AktualisiereTabReihenfolge();
         }
 
         // Setzt die Tabulatorreihenfolge für das Springen per Tab
-        private void UpdateTabOrder()
+        private void AktualisiereTabReihenfolge()
         {
             int tabIndex = 0;
             var controls = tablePanel.Controls.Cast<Control>()
@@ -241,20 +234,20 @@ namespace LaTeXTables
         }
 
         // Platziert den Button zur LaTeX-Erzeugung unten rechts
-        private void PlaceGenerateButton()
+        private void PlatziereErzeugenButton()
         {
             tablePanel.Controls.Remove(btnGenerateLatex);
             tablePanel.Controls.Add(btnGenerateLatex, tablePanel.ColumnCount - 1, tablePanel.RowCount - 1);
         }
 
         // Ereignis: Button zur LaTeX-Erzeugung wird geklickt
-        private void BtnGenerateLatex_Click(object sender, EventArgs e)
+        private void BtnLatexErzeugen_Click(object sender, EventArgs e)
         {
-            GenerateLatexAndUpdateOutput();
+            ErzeugeLatexUndAktualisiereAusgabe();
         }
 
         // Erstellt LaTeX-Code und zeigt ihn an
-        private void GenerateLatexAndUpdateOutput()
+        private void ErzeugeLatexUndAktualisiereAusgabe()
         {
             var tableData = new List<List<string>>();
 
@@ -264,13 +257,13 @@ namespace LaTeXTables
                 for (int col = 0; col < tablePanel.ColumnCount - 1; col++)
                 {
                     var control = tablePanel.GetControlFromPosition(col, row);
-                    rowData.Add(control is TextBox tb ? tb.Text : "");
+                    rowData.Add(control is TextBox tb1 ? tb1.Text : "");
                 }
                 tableData.Add(rowData);
             }
 
             string borderStyle = cbBorderStyle.SelectedItem?.ToString() ?? "Komplettes Gitter";
-            string latexCode = LatexCode.GenerateTable(tableData, borderStyle);
+            string latexCode = LatexCode.ErzeugeTabelle(tableData, borderStyle);
             outputTextBox.Text = latexCode;
         }
     }
