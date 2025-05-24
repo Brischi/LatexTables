@@ -14,7 +14,7 @@ namespace LaTeXTables.Controller
                 return "";
 
             // --- Spaltenanzahl bestimmen (für ungleichmäßige Zeilen) ---
-            int columnCount = tableData.Max(row => row.Count);
+            int columnCount = tableData.Max(row => row.Count) - 1;
 
             var sb = new StringBuilder();
 
